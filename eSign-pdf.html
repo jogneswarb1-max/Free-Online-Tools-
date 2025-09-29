@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eSign PDF Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      color: #0077cc;
+      text-align: center;
+    }
+    .tool-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    input[type="file"] {
+      margin: 10px 0;
+      width: 100%;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px 5px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    canvas {
+      border: 2px dashed #0077cc;
+      border-radius: 8px;
+      margin-top: 10px;
+      width: 100%;
+      height: 200px;
+      touch-action: none; /* for mobile drawing */
+    }
+    a.download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>✍️ eSign PDF Tool</h2>
+
+  <div class="tool-box">
+    <h3>Upload PDF</h3>
+    <input type="file" id="pdfInput" accept="application/pdf">
+  </div>
+
+  <div class="tool-box">
+    <h3>Draw Your Signature</h3>
+    <canvas id="sigCanvas"></canvas><br>
+    <button onclick="clearCanvas()">Clear</button>
+  </div>
+
+  <div class="tool-box">
+    <button onclick="signPDF()">Sign & Download PDF</button>
+    <div id="result"></div>
+  </div>
+
+  <!-- pdf-lib -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+  <script>
+    const canvas = document.getElementById("sigCanvas");
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = 200;
+    }
+    window.onload = resizeCanvas;
+    window.onresize = resizeCanvas;
+
+    function startDrawing(e) {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(getX(e), getY(e));
+    }
+    function draw(e) {
+      if (!drawing) return;
+      ctx.lineTo(getX(e), getY(e));
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    function stopDrawing() {
+      drawing = false;
+      ctx.beginPath();
+    }
+    function getX(e) {
+      return e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
+    }
+    function getY(e) {
+      return e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+    }
+
+    // Mouse events
+    canvas.addEventListener("mousedown", startDrawing);
+    canvas.addEventListener("mousemove", draw);
+    canvas.addEventListener("mouseup", stopDrawing);
+    canvas.addEventListener("mouseout", stopDrawing);
+
+    // Touch events
+    canvas.addEventListener("touchstart", startDrawing);
+    canvas.addEventListener("touchmove", draw);
+    canvas.addEventListener("touchend", stopDrawing);
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    async function signPDF() {
+      const file = document.getElementById("pdfInput").files[0];
+      if (!file) {
+        alert("Please upload a PDF file first.");
+        return;
+      }
+
+      // Convert signature to PNG image
+      const sigDataUrl = canvas.toDataURL("image/png");
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+
+      const pngImage = await pdfDoc.embedPng(sigDataUrl);
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+
+      const { width, height } = firstPage.getSize();
+      const pngDims = pngImage.scale(0.25);
+
+      // Place signature bottom-right
+      firstPage.drawImage(pngImage, {
+        x: width - pngDims.width - 50,
+        y: 50,
+        width: pngDims.width,
+        height: pngDims.height,
+      });
+
+      const pdfBytes = await pdfDoc.save();
+      let blob = new Blob([pdfBytes], { type: "application/pdf" });
+      let url = URL.createObjectURL(blob);
+
+      document.getElementById("result").innerHTML =
+        `<a class="download" href="${url}" download="signed.pdf">Download Signed PDF</a>`;
+    }
+  </script>
+
+</body>
+</html>
