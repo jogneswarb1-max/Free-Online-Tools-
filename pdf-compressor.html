@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Compressor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h2 {
+      color: #0077cc;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .tool-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 420px;
+      margin: 10px 0;
+      text-align: center;
+    }
+    input[type="file"] {
+      margin: 10px 0;
+      width: 100%;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .output {
+      margin-top: 15px;
+    }
+    a.download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📄 PDF Compressor</h2>
+
+  <div class="tool-box">
+    <input type="file" id="pdfInput" accept="application/pdf">
+    <button onclick="compressPDF()">Compress PDF</button>
+    <div class="output" id="result"></div>
+  </div>
+
+  <!-- PDF-LIB Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+  <script>
+    async function compressPDF() {
+      let fileInput = document.getElementById("pdfInput").files[0];
+      if (!fileInput) {
+        alert("Please select a PDF file.");
+        return;
+      }
+
+      const arrayBuffer = await fileInput.arrayBuffer();
+      const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+
+      // "Compress" by creating a new minimal PDF
+      const newPdf = await PDFLib.PDFDocument.create();
+      const copiedPages = await newPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      copiedPages.forEach((page) => newPdf.addPage(page));
+
+      const compressedPdfBytes = await newPdf.save({ useObjectStreams: true });
+
+      let blob = new Blob([compressedPdfBytes], { type: "application/pdf" });
+      let url = URL.createObjectURL(blob);
+      let link = `<a class="download" href="${url}" download="compressed.pdf">Download Compressed PDF</a>`;
+      document.getElementById("result").innerHTML = link;
+    }
+  </script>
+
+</body>
+</html>
