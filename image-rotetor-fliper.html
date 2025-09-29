@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All-in-One Image Editor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background: #007BFF;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.5em;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    input[type="file"], input[type="number"], button {
+      margin: 8px 5px;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+    input[type="file"], input[type="number"] {
+      border: 1px solid #ccc;
+      width: 140px;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    img {
+      max-width: 100%;
+      margin: 15px 0;
+      border-radius: 8px;
+      box-shadow: 0px 3px 8px rgba(0,0,0,0.1);
+    }
+    #crop-area {
+      border: 2px dashed red;
+      position: absolute;
+      display: none;
+      cursor: move;
+    }
+    .controls {
+      margin-top: 15px;
+    }
+    @media (max-width: 600px) {
+      header { font-size: 1.2em; }
+      .container { margin: 10px; padding: 15px; }
+      button, input[type="number"] { width: 100%; margin: 6px 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>🖼️ All-in-One Image Editor</header>
+  <div class="container">
+    <input type="file" id="upload" accept="image/*"><br>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <img id="preview" style="display:none;" alt="Preview Image">
+    <div id="crop-area"></div>
+
+    <div id="controls" class="controls" style="display:none;">
+      <!-- Resize -->
+      <div>
+        <input type="number" id="width" placeholder="Width(px)">
+        <input type="number" id="height" placeholder="Height(px)">
+        <button onclick="resizeImage()">Resize</button>
+      </div>
+
+      <!-- Crop -->
+      <div>
+        <button onclick="enableCrop()">Enable Crop</button>
+        <button onclick="applyCrop()">Apply Crop</button>
+      </div>
+
+      <!-- Rotate -->
+      <div>
+        <button onclick="rotate(90)">Rotate 90°</button>
+        <button onclick="rotate(180)">Rotate 180°</button>
+        <button onclick="rotate(270)">Rotate 270°</button>
+      </div>
+
+      <!-- Flip -->
+      <div>
+        <button onclick="flip(true,false)">Flip Horizontal</button>
+        <button onclick="flip(false,true)">Flip Vertical</button>
+      </div>
+
+      <!-- Download -->
+      <div>
+        <button onclick="downloadImage()">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const upload = document.getElementById('upload');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const controls = document.getElementById('controls');
+    const cropArea = document.getElementById('crop-area');
+    let originalImage = new Image();
+    let isCropping = false;
+    let cropStartX, cropStartY;
+
+    upload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        originalImage.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    originalImage.onload = () => {
+      canvas.width = originalImage.width;
+      canvas.height = originalImage.height;
+      ctx.drawImage(originalImage, 0, 0);
+      preview.src = canvas.toDataURL();
+      preview.style.display = "block";
+      controls.style.display = "block";
+    };
+
+    function updatePreview() {
+      preview.src = canvas.toDataURL();
+    }
+
+    function resizeImage() {
+      const width = parseInt(document.getElementById('width').value);
+      const height = parseInt(document.getElementById('height').value);
+      if (!width || !height) {
+        alert("Enter width & height!");
+        return;
+      }
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      tempCanvas.getContext('2d').drawImage(canvas, 0, 0, width, height);
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(tempCanvas, 0, 0);
+      updatePreview();
+    }
+
+    function enableCrop() {
+      isCropping = true;
+      cropArea.style.display = "block";
+      preview.onmousedown = startCrop;
+    }
+
+    function startCrop(e) {
+      if (!isCropping) return;
+      const rect = preview.getBoundingClientRect();
+      cropStartX = e.clientX - rect.left;
+      cropStartY = e.clientY - rect.top;
+      cropArea.style.left = e.clientX + "px";
+      cropArea.style.top = e.clientY + "px";
+      cropArea.style.width = "0px";
+      cropArea.style.height = "0px";
+      document.onmousemove = resizeCrop;
+      document.onmouseup = endCrop;
+    }
+
+    function resizeCrop(e) {
+      const rect = preview.getBoundingClientRect();
+      cropArea.style.width = (e.clientX - rect.left - cropStartX) + "px";
+      cropArea.style.height = (e.clientY - rect.top - cropStartY) + "px";
+      cropArea.style.left = (rect.left + cropStartX) + "px";
+      cropArea.style.top = (rect.top + cropStartY) + "px";
+    }
+
+    function endCrop() {
+      document.onmousemove = null;
+      document.onmouseup = null;
+    }
+
+    function applyCrop() {
+      if (!isCropping) return;
+      const rect = preview.getBoundingClientRect();
+      const imgRect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (parseInt(cropArea.style.left) - rect.left) * scaleX;
+      const y = (parseInt(cropArea.style.top) - rect.top) * scaleY;
+      const w = parseInt(cropArea.style.width) * scaleX;
+      const h = parseInt(cropArea.style.height) * scaleY;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = w;
+      tempCanvas.height = h;
+      tempCanvas.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, w, h);
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(tempCanvas, 0, 0);
+      updatePreview();
+
+      cropArea.style.display = "none";
+      isCropping = false;
+    }
+
+    function rotate(deg) {
+      const w = canvas.width;
+      const h = canvas.height;
+      let newW = w, newH = h;
+      if (deg === 90 || deg === 270) {
+        newW = h;
+        newH = w;
+      }
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = newW;
+      tempCanvas.height = newH;
+
+      tempCtx.translate(newW/2, newH/2);
+      tempCtx.rotate(deg * Math.PI / 180);
+      tempCtx.drawImage(canvas, -w/2, -h/2);
+
+      canvas.width = newW;
+      canvas.height = newH;
+      ctx.drawImage(tempCanvas, 0, 0);
+      updatePreview();
+    }
+
+    function flip(horizontal, vertical) {
+      const w = canvas.width;
+      const h = canvas.height;
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = w;
+      tempCanvas.height = h;
+
+      tempCtx.translate(horizontal ? w : 0, vertical ? h : 0);
+      tempCtx.scale(horizontal ? -1 : 1, vertical ? -1 : 1);
+      tempCtx.drawImage(canvas, 0, 0);
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(tempCanvas, 0, 0);
+      updatePreview();
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.download = "edited-image.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  </script>
+</body>
+</html>
