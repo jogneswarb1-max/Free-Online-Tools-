@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Lock & Unlock</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      color: #0077cc;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .tool-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 450px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    input[type="file"], input[type="password"] {
+      margin: 10px 0;
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .output {
+      margin-top: 15px;
+    }
+    a.download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🔒 PDF Lock & Unlock</h2>
+
+  <!-- PDF Lock -->
+  <div class="tool-box">
+    <h3>Lock PDF (Set Password)</h3>
+    <input type="file" id="lockInput" accept="application/pdf">
+    <input type="password" id="lockPassword" placeholder="Enter password">
+    <button onclick="lockPDF()">Lock</button>
+    <div class="output" id="lockResult"></div>
+  </div>
+
+  <!-- PDF Unlock -->
+  <div class="tool-box">
+    <h3>Unlock PDF (Remove Password)</h3>
+    <input type="file" id="unlockInput" accept="application/pdf">
+    <input type="password" id="unlockPassword" placeholder="Enter password">
+    <button onclick="unlockPDF()">Unlock</button>
+    <div class="output" id="unlockResult"></div>
+  </div>
+
+  <!-- PDF-LIB -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+  <script>
+    // "Lock" PDF (basic simulation)
+    async function lockPDF() {
+      const file = document.getElementById("lockInput").files[0];
+      const password = document.getElementById("lockPassword").value;
+
+      if (!file || !password) {
+        alert("Select a PDF and enter a password.");
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+
+      // Save password info in PDF metadata (not secure but basic demo)
+      pdfDoc.setTitle("Locked PDF");
+      pdfDoc.setSubject("Password: " + password);
+
+      const pdfBytes = await pdfDoc.save();
+      let blob = new Blob([pdfBytes], { type: "application/pdf" });
+      let url = URL.createObjectURL(blob);
+
+      document.getElementById("lockResult").innerHTML =
+        `<a class="download" href="${url}" download="locked.pdf">Download Locked PDF</a>`;
+    }
+
+    // "Unlock" PDF (basic check)
+    async function unlockPDF() {
+      const file = document.getElementById("unlockInput").files[0];
+      const password = document.getElementById("unlockPassword").value;
+
+      if (!file || !password) {
+        alert("Select a locked PDF and enter the password.");
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+
+      let subject = pdfDoc.getSubject();
+      if (subject && subject.includes("Password: ")) {
+        let savedPass = subject.replace("Password: ", "");
+        if (savedPass === password) {
+          pdfDoc.setSubject(""); // remove password info
+          const pdfBytes = await pdfDoc.save();
+          let blob = new Blob([pdfBytes], { type: "application/pdf" });
+          let url = URL.createObjectURL(blob);
+
+          document.getElementById("unlockResult").innerHTML =
+            `<a class="download" href="${url}" download="unlocked.pdf">Download Unlocked PDF</a>`;
+        } else {
+          alert("Incorrect password!");
+        }
+      } else {
+        alert("This PDF is not locked with this tool.");
+      }
+    }
+  </script>
+
+</body>
+</html>
