@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Merger & Splitter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      color: #0077cc;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .tool-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 450px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    input[type="file"] {
+      margin: 10px 0;
+      width: 100%;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .output {
+      margin-top: 15px;
+    }
+    a.download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📄 PDF Merger & Splitter</h2>
+
+  <!-- PDF Merger -->
+  <div class="tool-box">
+    <h3>Merge PDFs</h3>
+    <input type="file" id="mergeInput" accept="application/pdf" multiple>
+    <button onclick="mergePDFs()">Merge</button>
+    <div class="output" id="mergeResult"></div>
+  </div>
+
+  <!-- PDF Splitter -->
+  <div class="tool-box">
+    <h3>Split PDF</h3>
+    <input type="file" id="splitInput" accept="application/pdf">
+    <button onclick="splitPDF()">Split</button>
+    <div class="output" id="splitResult"></div>
+  </div>
+
+  <!-- PDF-LIB Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+  <script>
+    // ===== Merge PDFs =====
+    async function mergePDFs() {
+      const inputFiles = document.getElementById("mergeInput").files;
+      if (inputFiles.length < 2) {
+        alert("Please select at least 2 PDF files to merge.");
+        return;
+      }
+
+      const mergedPdf = await PDFLib.PDFDocument.create();
+
+      for (let file of inputFiles) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      }
+
+      const mergedPdfBytes = await mergedPdf.save();
+      let blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+      let url = URL.createObjectURL(blob);
+
+      document.getElementById("mergeResult").innerHTML =
+        `<a class="download" href="${url}" download="merged.pdf">Download Merged PDF</a>`;
+    }
+
+    // ===== Split PDF =====
+    async function splitPDF() {
+      const file = document.getElementById("splitInput").files[0];
+      if (!file) {
+        alert("Please select a PDF file to split.");
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+
+      let resultDiv = document.getElementById("splitResult");
+      resultDiv.innerHTML = "";
+
+      for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+        const newPdf = await PDFLib.PDFDocument.create();
+        const [page] = await newPdf.copyPages(pdfDoc, [i]);
+        newPdf.addPage(page);
+
+        const pdfBytes = await newPdf.save();
+        let blob = new Blob([pdfBytes], { type: "application/pdf" });
+        let url = URL.createObjectURL(blob);
+
+        let link = document.createElement("a");
+        link.href = url;
+        link.download = `page-${i + 1}.pdf`;
+        link.textContent = `Download Page ${i + 1}`;
+        link.className = "download";
+
+        resultDiv.appendChild(link);
+        resultDiv.appendChild(document.createElement("br"));
+      }
+    }
+  </script>
+
+</body>
+</html>
