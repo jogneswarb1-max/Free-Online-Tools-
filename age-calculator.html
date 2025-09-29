@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Age Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #0ea5ff, #2563eb);
+      color: #fff;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #16a34a;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #22c55e;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+    }
+    .result p {
+      margin: 6px 0;
+      font-size: 15px;
+    }
+    @media(max-width:600px) {
+      body { padding: 10px; }
+      .container { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Age Calculator</h2>
+    <label for="dob">Date of Birth:</label>
+    <input type="date" id="dob" />
+
+    <label for="today">Current Date:</label>
+    <input type="date" id="today" />
+
+    <button onclick="calculateAge()">Calculate Age</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calculateAge() {
+      const dob = new Date(document.getElementById("dob").value);
+      let todayInput = document.getElementById("today").value;
+      const today = todayInput ? new Date(todayInput) : new Date();
+
+      if (!dob.getTime()) {
+        document.getElementById("result").innerHTML = "<p>Please select your Date of Birth</p>";
+        return;
+      }
+      if (today < dob) {
+        document.getElementById("result").innerHTML = "<p>Current date must be after Date of Birth.</p>";
+        return;
+      }
+
+      // Calculate years, months, days
+      let years = today.getFullYear() - dob.getFullYear();
+      let months = today.getMonth() - dob.getMonth();
+      let days = today.getDate() - dob.getDate();
+
+      if (days < 0) {
+        months--;
+        let prevMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+        days += prevMonth;
+      }
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+
+      // Breakdown in time
+      let diffMs = today - dob;
+      let diffSec = Math.floor(diffMs / 1000);
+      let diffMin = Math.floor(diffSec / 60);
+      let diffHr = Math.floor(diffMin / 60);
+      let diffDays = Math.floor(diffHr / 24);
+      let diffWeeks = Math.floor(diffDays / 7);
+
+      document.getElementById("result").innerHTML = `
+        <p><strong>Exact Age:</strong> ${years} Years, ${months} Months, ${days} Days</p>
+        <p><strong>Total Months:</strong> ${years * 12 + months} Months</p>
+        <p><strong>Total Weeks:</strong> ${diffWeeks} Weeks</p>
+        <p><strong>Total Days:</strong> ${diffDays} Days</p>
+        <p><strong>Total Hours:</strong> ${diffHr} Hours</p>
+        <p><strong>Total Minutes:</strong> ${diffMin} Minutes</p>
+        <p><strong>Total Seconds:</strong> ${diffSec} Seconds</p>
+      `;
+    }
+  </script>
+</body>
+</html>
