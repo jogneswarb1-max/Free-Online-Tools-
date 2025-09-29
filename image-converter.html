@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Image Converter Tool</title>
+  <style>
+    :root {
+      --blue: #007bff;
+      --bg: #ffffff;
+      --muted: #6b7280;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, var(--bg), #f8fbff);
+      color: #0b1220;
+    }
+    .container { max-width: 980px; margin: 24px auto; padding: 18px; }
+    .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .logo { width: 56px; height: 56px; border-radius: 12px; background: var(--blue); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 20px; }
+    h1 { margin: 0; font-size: 20px; }
+    .lead { color: var(--muted); font-size: 14px; }
+    .tool { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+    @media (max-width: 880px) { .tool { grid-template-columns: 1fr; } }
+    .drop { border: 2px dashed var(--blue); border-radius: 12px; padding: 14px; text-align: center; background: #f0f8ff; }
+    .drop input { display: none; }
+    .btn { padding: 10px 14px; border-radius: 10px; background: var(--blue); color: #fff; cursor: pointer; border: none; }
+    .ghost { background: #f9f9f9; border: 1px solid #ccc; padding: 10px; border-radius: 10px; cursor: pointer; }
+    .controls { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .row { display: flex; gap: 8px; }
+    .col { flex: 1; }
+    .preview { border: 1px solid #eee; padding: 10px; border-radius: 12px; text-align: center; }
+    .preview img { max-width: 100%; height: auto; }
+    .meta { font-size: 13px; color: var(--muted); }
+    .small { font-size: 12px; color: var(--muted); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <header>
+        <div class="logo">IC</div>
+        <div>
+          <h1>Image Converter</h1>
+          <p class="lead">Upload, preview, convert and download images — client-side, fast and mobile-friendly.</p>
+        </div>
+      </header>
+
+      <div class="tool">
+        <div class="left">
+          <div id="dropzone" class="drop">
+            <p id="droptext">Drag & drop an image here or</p>
+            <label class="btn" for="fileInput">Choose Image</label>
+            <input id="fileInput" type="file" accept="image/*">
+            <p class="small">All conversions are processed in your browser. Nothing is uploaded to a server.</p>
+          </div>
+
+          <div class="controls">
+            <div>
+              <label for="format">Output format</label>
+              <select id="format">
+                <option value="image/jpeg">JPEG (.jpg)</option>
+                <option value="image/png">PNG (.png)</option>
+                <option value="image/webp">WEBP (.webp)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="quality">Quality (compression) — <span id="qval">0.8</span></label>
+              <input id="quality" type="range" min="0.1" max="1" step="0.01" value="0.8">
+              <p class="small">JPEG/WEBP only. PNG is lossless.</p>
+            </div>
+
+            <div class="row">
+              <div class="col">
+                <label for="width">Width (px)</label>
+                <input id="width" type="number" placeholder="Auto">
+              </div>
+              <div class="col">
+                <label for="height">Height (px)</label>
+                <input id="height" type="number" placeholder="Auto">
+              </div>
+            </div>
+            <label><input id="keepAspect" type="checkbox" checked> Keep aspect ratio</label>
+
+            <div class="actions">
+              <button id="convertBtn" class="btn">Convert & Preview</button>
+              <button id="downloadBtn" class="ghost" disabled>Download Converted</button>
+              <button id="resetBtn" class="ghost">Reset</button>
+            </div>
+          </div>
+
+          <div class="meta" id="fileMeta">No file chosen</div>
+        </div>
+
+        <aside class="right">
+          <div class="preview" id="previewBox">
+            <p class="small">Preview</p>
+            <img id="previewImage" class="hidden" alt="preview">
+            <canvas id="canvas" class="hidden"></canvas>
+            <div id="previewInfo" class="meta"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const format = document.getElementById('format');
+    const quality = document.getElementById('quality');
+    const qval = document.getElementById('qval');
+    const widthInput = document.getElementById('width');
+    const heightInput = document.getElementById('height');
+    const keepAspect = document.getElementById('keepAspect');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const previewImage = document.getElementById('previewImage');
+    const previewInfo = document.getElementById('previewInfo');
+    const fileMeta = document.getElementById('fileMeta');
+    const canvas = document.getElementById('canvas');
+
+    let originalImage = new Image();
+    let originalFile = null;
+    let lastBlob = null;
+
+    function resetAll() {
+      previewImage.src = '';
+      previewImage.classList.add('hidden');
+      previewInfo.textContent = '';
+      fileMeta.textContent = 'No file chosen';
+      downloadBtn.disabled = true;
+      widthInput.value = '';
+      heightInput.value = '';
+    }
+    resetAll();
+
+    function humanBytes(bytes) {
+      const units = ['B', 'KB', 'MB'];
+      let i = 0;
+      while (bytes >= 1024 && i < units.length - 1) {
+        bytes /= 1024;
+        i++;
+      }
+      return bytes.toFixed(2) + ' ' + units[i];
+    }
+
+    async function handleFile(file) {
+      if (!file) return;
+      originalFile = file;
+      fileMeta.textContent = `${file.name} • ${humanBytes(file.size)} • ${file.type}`;
+
+      const dataUrl = await fileToDataURL(file);
+      originalImage.onload = () => {
+        previewImage.src = dataUrl;
+        previewImage.classList.remove('hidden');
+        previewInfo.textContent = `${originalImage.width} × ${originalImage.height}`;
+        widthInput.value = originalImage.width;
+        heightInput.value = originalImage.height;
+      };
+      originalImage.src = dataUrl;
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.onerror = () => rej(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    quality.addEventListener('input', () => { qval.textContent = quality.value; });
+
+    async function convertImage() {
+      if (!originalImage.src) { alert('Please choose an image first.'); return; }
+      const outType = format.value;
+      const q = parseFloat(quality.value) || 0.8;
+      const w = parseInt(widthInput.value) || originalImage.width;
+      const h = parseInt(heightInput.value) || originalImage.height;
+
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(originalImage, 0, 0, w, h);
+
+      const blob = await new Promise(res => canvas.toBlob(res, outType, q));
+      lastBlob = blob;
+      const blobUrl = URL.createObjectURL(blob);
+      previewImage.src = blobUrl;
+      previewInfo.textContent = `${w} × ${h} • ${humanBytes(blob.size)} • ${outType.split('/')[1]}`;
+      downloadBtn.disabled = false;
+      downloadBtn.onclick = () => downloadBlob(blob, originalFile?.name || 'converted.' + outType.split('/')[1]);
+    }
+
+    function downloadBlob(blob, filename) {
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    convertBtn.addEventListener('click', convertImage);
+    resetBtn.addEventListener('click', resetAll);
+  </script>
+</body>
+</html>
