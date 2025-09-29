@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GST Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: #fff;
+    }
+    .container {
+      max-width: 420px;
+      margin: auto;
+      background: rgba(0,0,0,0.25);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #22c55e;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #16a34a;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+    }
+    .result p {
+      margin: 8px 0;
+      font-size: 15px;
+    }
+    @media(max-width:600px) {
+      body { padding: 10px; }
+      .container { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>GST Calculator</h2>
+    <label for="amount">Product Price (₹):</label>
+    <input type="number" id="amount" placeholder="Enter product price">
+
+    <label for="gstRate">GST Rate (%):</label>
+    <select id="gstRate">
+      <option value="5">5%</option>
+      <option value="12">12%</option>
+      <option value="18" selected>18%</option>
+      <option value="28">28%</option>
+    </select>
+
+    <label for="type">Calculation Type:</label>
+    <select id="type">
+      <option value="exclusive" selected>GST Exclusive (Add GST)</option>
+      <option value="inclusive">GST Inclusive (Extract GST)</option>
+    </select>
+
+    <button onclick="calculateGST()">Calculate GST</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calculateGST() {
+      const amount = parseFloat(document.getElementById("amount").value);
+      const rate = parseFloat(document.getElementById("gstRate").value);
+      const type = document.getElementById("type").value;
+      const resultDiv = document.getElementById("result");
+
+      if (!amount || amount <= 0) {
+        resultDiv.innerHTML = "<p>Please enter a valid amount.</p>";
+        return;
+      }
+
+      let gstAmount, totalAmount, basePrice;
+
+      if (type === "exclusive") {
+        // GST Exclusive → Add GST
+        gstAmount = (amount * rate) / 100;
+        totalAmount = amount + gstAmount;
+        resultDiv.innerHTML = `
+          <p><strong>Original Price:</strong> ₹${amount.toFixed(2)}</p>
+          <p><strong>GST (${rate}%):</strong> ₹${gstAmount.toFixed(2)}</p>
+          <p><strong>Total Price (Incl. GST):</strong> ₹${totalAmount.toFixed(2)}</p>
+        `;
+      } else {
+        // GST Inclusive → Extract GST
+        basePrice = (amount * 100) / (100 + rate);
+        gstAmount = amount - basePrice;
+        resultDiv.innerHTML = `
+          <p><strong>Total Price (Incl. GST):</strong> ₹${amount.toFixed(2)}</p>
+          <p><strong>Base Price:</strong> ₹${basePrice.toFixed(2)}</p>
+          <p><strong>GST (${rate}%):</strong> ₹${gstAmount.toFixed(2)}</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
