@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Advanced Scientific Calculator</title>
+
+  <!-- math.js for evaluation (complex numbers, matrices, advanced math) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@11.9.0/lib/browser/math.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f1724;
+      --panel:#0b1220;
+      --accent:#0ea5ff;
+      --muted:#94a3b8;
+      --btn:#0b1228;
+      --primary:#1e293b;
+      --success:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      background:linear-gradient(180deg,var(--bg),#071026);
+      color:#e6eef8;
+      padding:16px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .container{
+      max-width:980px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:1fr 380px;
+      gap:16px;
+      align-items:start;
+    }
+
+    /* single-column on small screens */
+    @media (max-width:900px){
+      .container{grid-template-columns:1fr; padding-bottom:24px}
+    }
+
+    .panel{
+      background:linear-gradient(180deg,var(--panel),#071026);
+      border-radius:12px;
+      padding:14px;
+      box-shadow:0 6px 18px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.02);
+    }
+
+    .display{
+      background:linear-gradient(180deg,#071827,#02101a);
+      padding:14px;
+      border-radius:10px;
+      min-height:92px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:6px;
+      margin-bottom:12px;
+    }
+
+    .expr{
+      font-size:1.05rem;
+      color:var(--muted);
+      word-break:break-all;
+    }
+    .result{
+      font-size:1.45rem;
+      font-weight:600;
+      color:#e6f6ff;
+      word-break:break-all;
+    }
+
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .controls .btn, button{
+      background:var(--btn);
+      color:var(--muted);
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.03);
+      cursor:pointer;
+      font-weight:600;
+      font-size:0.95rem;
+    }
+    .controls .btn.active{ background:linear-gradient(90deg,var(--accent),#60a5fa); color:#032; box-shadow:0 6px 20px rgba(14,165,255,0.12) }
+
+    /* keypad grid */
+    .keypad{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:8px;
+    }
+    .key{
+      padding:12px;
+      border-radius:10px;
+      background:var(--primary);
+      color:#e6eef8;
+      text-align:center;
+      font-weight:700;
+      font-size:0.98rem;
+      border:1px solid rgba(255,255,255,0.02);
+      cursor:pointer;
+      user-select:none;
+    }
+    .key.aux{ background:transparent; color:var(--muted); border:1px dashed rgba(255,255,255,0.03); font-weight:600 }
+    .key.wide{ grid-column:span 2 }
+    .key.red{ background:linear-gradient(180deg,#ff4d6d,#d43a55); color:white }
+    .key.green{ background:linear-gradient(180deg,#10b981,#059669); color:white }
+
+    /* right column: history & info */
+    .side{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .history{
+      max-height:420px;
+      overflow:auto;
+      padding:8px;
+      border-radius:8px;
+      background:linear-gradient(180deg,#061226,#041021);
+      border:1px solid rgba(255,255,255,0.02);
+    }
+    .hist-item{
+      padding:8px;
+      border-bottom:1px dashed rgba(255,255,255,0.02);
+      font-size:0.95rem;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:center;
+    }
+    .hist-item:last-child{ border-bottom:0 }
+    .hist-expression{ color:#cfe9ff; font-weight:600; flex:1; margin-right:8px }
+    .hist-actions button{ font-size:0.85rem; padding:6px 8px; margin-left:6px }
+
+    .footer-note{
+      font-size:0.85rem;
+      color:var(--muted);
+      line-height:1.25;
+      padding:10px;
+      border-radius:8px;
+      background:linear-gradient(180deg,#071827,#05101a);
+      border:1px solid rgba(255,255,255,0.02);
+    }
+
+    /* small helpers */
+    .row{display:flex;gap:8px;align-items:center}
+    .select{
+      background:var(--btn);
+      color:var(--muted);
+      padding:8px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    .tiny{font-size:0.85rem;color:var(--muted)}
+    .action-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- LEFT: Calculator -->
+    <div class="panel">
+      <div class="display" role="region" aria-label="Calculator display">
+        <div class="expr" id="expression" contenteditable="false">0</div>
+        <div class="result" id="result">0</div>
+      </div>
+
+      <div class="controls" style="margin-bottom:10px;">
+        <div class="row" style="gap:10px;flex:1;">
+          <button class="btn" id="clearBtn">AC</button>
+          <button class="btn" id="delBtn">DEL</button>
+          <button class="btn" id="ansBtn">ANS</button>
+          <button class="btn" id="modeBtn">Mode: <span id="angleMode">RAD</span></button>
+        </div>
+
+        <div style="margin-left:auto">
+          <button class="btn" id="evalBtn" style="background:linear-gradient(90deg,var(--accent),#60a5fa);color:#02111a">= Evaluate</button>
+        </div>
+      </div>
+
+      <div class="keypad" id="keypad">
+        <!-- Row 1 -->
+        <div class="key aux" data-val="(">(</div>
+        <div class="key aux" data-val=")">)</div>
+        <div class="key aux" data-val="[">[</div>
+        <div class="key aux" data-val="]">]</div>
+        <div class="key aux" data-val=",">,</div>
+
+        <!-- Row 2 -->
+        <div class="key" data-val="7">7</div>
+        <div class="key" data-val="8">8</div>
+        <div class="key" data-val="9">9</div>
+        <div class="key aux" data-val="^">xʸ</div>
+        <div class="key aux" data-val="sqrt(">√</div>
+
+        <!-- Row 3 -->
+        <div class="key" data-val="4">4</div>
+        <div class="key" data-val="5">5</div>
+        <div class="key" data-val="6">6</div>
+        <div class="key aux" data-val="*">×</div>
+        <div class="key aux" data-val="/">÷</div>
+
+        <!-- Row 4 -->
+        <div class="key" data-val="1">1</div>
+        <div class="key" data-val="2">2</div>
+        <div class="key" data-val="3">3</div>
+        <div class="key aux" data-val="+">+</div>
+        <div class="key aux" data-val="-">−</div>
+
+        <!-- Row 5 -->
+        <div class="key wide" data-val="0">0</div>
+        <div class="key" data-val=".">.</div>
+        <div class="key aux" data-val="%">mod</div>
+        <div class="key red" id="piBtn" data-val="pi">π</div>
+
+        <!-- Row 6: functions -->
+        <div class="key aux" data-val="sin(">sin</div>
+        <div class="key aux" data-val="cos(">cos</div>
+        <div class="key aux" data-val="tan(">tan</div>
+        <div class="key aux" data-val="asin(">asin</div>
+        <div class="key aux" data-val="acos(">acos</div>
+
+        <!-- Row 7 -->
+        <div class="key aux" data-val="atan(">atan</div>
+        <div class="key aux" data-val="sinh(">sinh</div>
+        <div class="key aux" data-val="cosh(">cosh</div>
+        <div class="key aux" data-val="tanh(">tanh</div>
+        <div class="key aux" data-val="abs(">abs</div>
+
+        <!-- Row 8 -->
+        <div class="key aux" data-val="log10(">log₁₀</div>
+        <div class="key aux" data-val="log(">ln</div>
+        <div class="key aux" data-val="exp(">eˣ</div>
+        <div class="key aux" data-val="factorial(">x!</div>
+        <div class="key aux" data-val="sqrt(">√</div>
+
+        <!-- Row 9: complex & matrix -->
+        <div class="key aux" data-val="i">i</div>
+        <div class="key aux" data-val="re(">Re</div>
+        <div class="key aux" data-val="im(">Im</div>
+        <div class="key aux" data-val="det(">det</div>
+        <div class="key aux" data-val="inv(">inv</div>
+
+        <!-- Row 10 -->
+        <div class="key aux" data-val="[" title="matrix start">[</div>
+        <div class="key aux" data-val="]" title="matrix end">]</div>
+        <div class="key aux" data-val="," title="matrix separator">,</div>
+        <div class="key aux" data-val="*">·</div>
+        <div class="key green" id="copyBtn">Copy</div>
+      </div>
+
+      <div style="margin-top:12px" class="footer-note">
+        <strong>Tips:</strong>  
+        - Use <code>i</code> for imaginary unit (e.g. <code>2+3i</code>).  
+        - Matrices: give input like <code>[[1,2],[3,4]]</code> and use <code>det(..)</code>, <code>inv(..)</code>, or math operators.  
+        - Use <code>ans</code> to reuse last result. Permutations/combinations available via <code>factorial(n)/(factorial(k)*factorial(n-k))</code>.
+      </div>
+    </div>
+
+    <!-- RIGHT: History & info -->
+    <div class="side">
+      <div class="panel history" id="history" aria-live="polite" aria-label="Calculation history">
+        <div style="font-weight:700;color:#cfe9ff;padding:6px 8px">History</div>
+        <!-- history items appended here -->
+      </div>
+
+      <div class="panel" style="padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-weight:700;color:#cfe9ff">Calculator Info</div>
+          <div class="tiny">math.js v{{ver}}</div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <select id="precision" class="select" title="Result precision">
+            <option value="8">Precision: 8</option>
+            <option value="12">Precision: 12</option>
+            <option value="18">Precision: 18</option>
+          </select>
+
+          <button class="btn" id="clearHistory">Clear History</button>
+          <button class="btn" id="exportHistory">Export</button>
+        </div>
+
+        <div style="font-size:0.95rem;color:var(--muted);line-height:1.4">
+          - Angle mode affects trig functions. Toggle <strong>Mode</strong>.  
+          - For permutations use <code>factorial(n)/(factorial(n-k))</code>.  
+          - For combinations use <code>factorial(n)/(factorial(k)*factorial(n-k))</code>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Initialize
+  const expressionEl = document.getElementById('expression');
+  const resultEl = document.getElementById('result');
+  const keypad = document.getElementById('keypad');
+  const historyEl = document.getElementById('history');
+  const angleModeEl = document.getElementById('angleMode');
+  const precisionSelect = document.getElementById('precision');
+
+  // state
+  let expr = '';
+  let ans = null;
+  let angleMode = 'RAD'; // or DEG
+  let hist = [];
+
+  // math.js config: we'll adjust trig conversions when needed
+  const math = window.math;
+
+  // helper: prettify result
+  function formatResult(val){
+    try{
+      // format complex or matrix or number
+      if (math.typeOf(val) === 'Complex') {
+        // show a+bi with limited precision
+        const re = roundNumber(val.re);
+        const im = roundNumber(val.im);
+        return `${re}${im>=0?'+':''}${im}i`;
+      }
+      if (Array.isArray(val) || math.typeOf(val)==='Matrix') {
+        return JSON.stringify(math.clone(val).valueOf());
+      }
+      return roundNumber(val).toString();
+    }catch(e){
+      return String(val);
+    }
+  }
+
+  function roundNumber(x){
+    const p = parseInt(precisionSelect.value||8);
+    if (typeof x === 'number' && !isFinite(x)) return x;
+    if (math.typeOf(x) === 'Complex') return x;
+    // handle BigNumber too
+    try{
+      return math.format(x, {notation:'auto',precision:p});
+    }catch(e){
+      return x;
+    }
+  }
+
+  // update UI expression/result
+  function setExpression(s){
+    expr = s;
+    expressionEl.textContent = expr || '0';
+  }
+  function setResult(s){
+    resultEl.textContent = s;
+  }
+
+  // insert token
+  function insertToken(token){
+    // if previously result displayed and expr is '0' then replace
+    if(expr === '0' && token.match(/[0-9.]/)) expr = '';
+    expr = expr + token;
+    setExpression(expr);
+  }
+
+  // keypad clicks
+  keypad.addEventListener('click', (ev)=>{
+    const key = ev.target.closest('.key');
+    if(!key) return;
+    const val = key.dataset.val;
+    if(!val) return;
+    // special buttons
+    if(key.id === 'piBtn'){
+      insertToken('pi');
+      return;
+    }
+    if(key.id === 'copyBtn'){
+      navigator.clipboard?.writeText(resultEl.textContent).then(()=> {
+        key.textContent = 'Copied';
+        setTimeout(()=> key.textContent = 'Copy',900);
+      }).catch(()=>{});
+      return;
+    }
+    insertToken(val);
+  });
+
+  // AC, DEL, ANS, Evaluate, Mode toggle
+  document.getElementById('clearBtn').addEventListener('click', ()=>{ expr=''; setExpression(''); setResult('0'); });
+  document.getElementById('delBtn').addEventListener('click', ()=>{ expr=expr.slice(0,-1); setExpression(expr); });
+  document.getElementById('ansBtn').addEventListener('click', ()=>{ if(ans!==null) insertToken('ans'); });
+  document.getElementById('modeBtn').addEventListener('click', ()=>{
+    angleMode = angleMode === 'RAD' ? 'DEG' : 'RAD';
+    angleModeEl.textContent = angleMode;
+  });
+
+  // Evaluate expression using math.js with custom scope
+  document.getElementById('evalBtn').addEventListener('click', evaluateExpression);
+
+  function evaluateExpression(){
+    if(!expr || expr.trim()==='') return;
+    try{
+      // build scope including ans and constants
+      const scope = Object.create(null);
+      scope.ans = ans;
+      scope.pi = math.pi;
+      scope.e = math.e;
+      scope.i = math.complex(0,1);
+
+      // Wrap trig functions if in DEG mode
+      const config = {
+        // we will override sin/cos/tan/asin/etc when in DEG mode
+      };
+
+      // create a math.js parser to inject custom functions
+      const parser = math.parser();
+
+      // import standard math functions/const into parser
+      parser.set('ans', scope.ans);
+      parser.set('pi', scope.pi);
+      parser.set('e', scope.e);
+      parser.set('i', scope.i);
+
+      // helper to convert deg<->rad if needed
+      const toRad = (x)=> (angleMode==='DEG' ? math.unit(x,'deg').toNumber('rad') : x);
+      const fromRad = (x)=> (angleMode==='DEG' ? math.unit(x,'rad').toNumber('deg') : x);
+
+      // define trig functions according to mode
+      parser.set('sin', function(x){ return math.sin(toRad(x)); });
+      parser.set('cos', function(x){ return math.cos(toRad(x)); });
+      parser.set('tan', function(x){ return math.tan(toRad(x)); });
+      parser.set('asin', function(x){ return fromRad(math.asin(x)); });
+      parser.set('acos', function(x){ return fromRad(math.acos(x)); });
+      parser.set('atan', function(x){ return fromRad(math.atan(x)); });
+
+      // hyperbolic pass-through
+      parser.set('sinh', (x)=> math.sinh(x));
+      parser.set('cosh', (x)=> math.cosh(x));
+      parser.set('tanh', (x)=> math.tanh(x));
+
+      // other helpers
+      parser.set('sqrt', (x)=> math.sqrt(x));
+      parser.set('log', (x)=> math.log(x)); // natural log
+      parser.set('log10', (x)=> math.log10 ? math.log10(x) : math.log(x)/math.log(10)); // fallback
+      parser.set('exp', (x)=> math.exp(x));
+      parser.set('abs', (x)=> math.abs(x));
+      parser.set('det', (m)=> math.det(m));
+      parser.set('inv', (m)=> math.inv(m));
+      parser.set('re', (z)=> (math.typeOf(z)==='Complex'? z.re : math.re(z)) );
+      parser.set('im', (z)=> (math.typeOf(z)==='Complex'? z.im : math.im(z)) );
+      parser.set('factorial', (n)=> math.factorial(n) );
+
+      // allow % as modulus function transform: user can type "a % b" but JS modulus is fine; math.evaluate supports mod as well
+      // Evaluate
+      const raw = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/–/g,'-').replace(/,/g,',');
+      const value = parser.evaluate(raw);
+
+      ans = value;
+      const display = formatResult(value);
+      setResult(display);
+
+      // push to history
+      pushHistory({expression: expr, result: display, timestamp: Date.now()});
+
+    }catch(err){
+      setResult('Error: ' + (err && err.message ? err.message : String(err)));
+    }
+  }
+
+  // keyboard support for numbers/operators & Enter
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){ e.preventDefault(); evaluateExpression(); return; }
+    if(e.key === 'Backspace'){ expr = expr.slice(0,-1); setExpression(expr); return; }
+    // allow digits and basic operators
+    const allowed = '0123456789+-*/().%^,';
+    if(allowed.indexOf(e.key) !== -1){
+      insertToken(e.key);
+      return;
+    }
+  });
+
+  // History functions
+  function pushHistory(item){
+    hist.unshift(item);
+    if(hist.length>100) hist.pop();
+    renderHistory();
+  }
+
+  function renderHistory(){
+    // clear current items but keep header
+    historyEl.querySelectorAll('.hist-item').forEach(n=>n.remove());
+    hist.forEach((h, idx)=>{
+      const div = document.createElement('div');
+      div.className = 'hist-item';
+      const exprSpan = document.createElement('div');
+      exprSpan.className = 'hist-expression';
+      exprSpan.textContent = h.expression;
+      const right = document.createElement('div');
+      right.className = 'hist-actions';
+      const resBtn = document.createElement('button');
+      resBtn.className = 'btn';
+      resBtn.textContent = h.result;
+      resBtn.title = 'Use result as ans';
+      resBtn.addEventListener('click', ()=>{ ans = h.result; });
+      const insertBtn = document.createElement('button');
+      insertBtn.className = 'btn';
+      insertBtn.textContent = 'Use';
+      insertBtn.title = 'Insert expression to input';
+      insertBtn.addEventListener('click', ()=>{ setExpression(h.expression); });
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn';
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', ()=>{ navigator.clipboard?.writeText(h.result) });
+      right.appendChild(resBtn);
+      right.appendChild(insertBtn);
+      right.appendChild(copyBtn);
+
+      div.appendChild(exprSpan);
+      div.appendChild(right);
+      historyEl.appendChild(div);
+    });
+  }
+
+  // clear history
+  document.getElementById('clearHistory').addEventListener('click', ()=>{
+    hist = [];
+    renderHistory();
+  });
+
+  // export history as json
+  document.getElementById('exportHistory').addEventListener('click', ()=>{
+    const data = JSON.stringify(hist, null, 2);
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'calc-history.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // precision change -> reformat last result
+  precisionSelect.addEventListener('change', ()=>{
+    if(ans !== null) setResult(formatResult(ans));
+  });
+
+  // set initial values
+  setExpression('');
+  setResult('0');
+
+  // expose version in UI (simple replace)
+  document.body.innerHTML = document.body.innerHTML.replace('{{ver}}', (math && math.version) ? math.version : 'n/a');
+
+  // Example: prefill with a sample expression for users
+  // setExpression('det([[1,2],[3,4]])'); // uncomment to demo
+</script>
+</body>
+</html>
