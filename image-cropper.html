@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Cropper Tool</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background: #007BFF;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.5em;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    input[type="file"], button {
+      margin: 10px 0;
+      padding: 10px;
+      width: 90%;
+      max-width: 300px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    img {
+      max-width: 100%;
+      display: block;
+      margin: 10px auto;
+      border-radius: 8px;
+    }
+    #result {
+      margin-top: 15px;
+    }
+    canvas {
+      max-width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    @media (max-width: 600px) {
+      header { font-size: 1.2em; }
+      .container { margin: 10px; padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <header>✂️ Image Cropper Tool</header>
+  <div class="container">
+    <input type="file" id="upload" accept="image/*"><br>
+    <img id="image" style="display:none;">
+    <div>
+      <button id="cropBtn" style="display:none;">Crop & Download</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  <script>
+    const upload = document.getElementById('upload');
+    const image = document.getElementById('image');
+    const cropBtn = document.getElementById('cropBtn');
+    const result = document.getElementById('result');
+    let cropper;
+
+    upload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        image.src = event.target.result;
+        image.style.display = "block";
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(image, {
+          aspectRatio: NaN, // Free crop (no fixed ratio)
+          viewMode: 1,
+        });
+        cropBtn.style.display = "inline-block";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    cropBtn.addEventListener('click', () => {
+      const canvas = cropper.getCroppedCanvas();
+      if (!canvas) {
+        alert("Please select an area to crop.");
+        return;
+      }
+      result.innerHTML = "";
+      result.appendChild(canvas);
+
+      canvas.toBlob((blob) => {
+        const link = document.createElement('a');
+        link.download = "cropped-image.png";
+        link.href = URL.createObjectURL(blob);
+        link.click();
+      }, 'image/png');
+    });
+  </script>
+</body>
+</html>
