@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF ⇆ Word Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h2 {
+      color: #0077cc;
+      margin-bottom: 15px;
+    }
+    .converter {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 420px;
+      margin: 10px 0;
+      text-align: center;
+    }
+    input[type="file"] {
+      margin: 10px 0;
+      width: 100%;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .output {
+      margin-top: 15px;
+    }
+    a.download {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📄 PDF ⇆ Word Converter</h2>
+
+  <!-- PDF to Word -->
+  <div class="converter">
+    <h3>Convert PDF ➝ Word</h3>
+    <input type="file" id="pdfInput" accept="application/pdf">
+    <button onclick="convertPDFtoWord()">Convert</button>
+    <div class="output" id="pdfToWordResult"></div>
+  </div>
+
+  <!-- Word to PDF -->
+  <div class="converter">
+    <h3>Convert Word ➝ PDF</h3>
+    <input type="file" id="wordInput" accept=".doc,.docx">
+    <button onclick="convertWordtoPDF()">Convert</button>
+    <div class="output" id="wordToPdfResult"></div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
+
+  <script>
+    async function convertPDFtoWord() {
+      let fileInput = document.getElementById('pdfInput').files[0];
+      if (!fileInput) {
+        alert("Please select a PDF file.");
+        return;
+      }
+
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        let text = "This is a placeholder. Full PDF → Word requires server API.";
+        // Generate DOCX file
+        const doc = new docx.Document({
+          sections: [{
+            properties: {},
+            children: [new docx.Paragraph(text)]
+          }]
+        });
+        docx.Packer.toBlob(doc).then(blob => {
+          let url = URL.createObjectURL(blob);
+          let link = `<a class="download" href="${url}" download="converted.docx">Download Word</a>`;
+          document.getElementById("pdfToWordResult").innerHTML = link;
+        });
+      };
+      reader.readAsArrayBuffer(fileInput);
+    }
+
+    async function convertWordtoPDF() {
+      let fileInput = document.getElementById('wordInput').files[0];
+      if (!fileInput) {
+        alert("Please select a Word file.");
+        return;
+      }
+
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        pdf.text("This is a placeholder. Word → PDF basic text only.", 10, 20);
+        let url = pdf.output("bloburl");
+        let link = `<a class="download" href="${url}" download="converted.pdf">Download PDF</a>`;
+        document.getElementById("wordToPdfResult").innerHTML = link;
+      };
+      reader.readAsArrayBuffer(fileInput);
+    }
+  </script>
+
+</body>
+</html>
