@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMI Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      color: #fff;
+    }
+    .container {
+      max-width: 450px;
+      margin: auto;
+      background: rgba(0,0,0,0.25);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #0ea5ff;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0284c7;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+    }
+    .result p {
+      margin: 8px 0;
+      font-size: 15px;
+    }
+    .recommend {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .underweight { background: #3b82f6; }
+    .normal { background: #22c55e; }
+    .overweight { background: #f59e0b; }
+    .obese { background: #ef4444; }
+    @media(max-width:600px) {
+      body { padding: 10px; }
+      .container { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>BMI Calculator</h2>
+    <label for="weight">Weight (kg):</label>
+    <input type="number" id="weight" placeholder="Enter weight in kg">
+
+    <label for="height">Height (cm):</label>
+    <input type="number" id="height" placeholder="Enter height in cm">
+
+    <button onclick="calculateBMI()">Calculate BMI</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calculateBMI() {
+      const weight = parseFloat(document.getElementById("weight").value);
+      const heightCm = parseFloat(document.getElementById("height").value);
+
+      if (!weight || !heightCm) {
+        document.getElementById("result").innerHTML = "<p>Please enter both weight and height.</p>";
+        return;
+      }
+
+      const heightM = heightCm / 100;
+      const bmi = (weight / (heightM * heightM)).toFixed(2);
+
+      let category = "";
+      let recommendation = "";
+      let cssClass = "";
+
+      if (bmi < 18.5) {
+        category = "Underweight";
+        recommendation = "Try to eat a balanced diet with more calories and protein. Consult a nutritionist if needed.";
+        cssClass = "underweight";
+      } else if (bmi >= 18.5 && bmi < 24.9) {
+        category = "Normal Weight";
+        recommendation = "Great! Maintain your healthy lifestyle with balanced diet and regular exercise.";
+        cssClass = "normal";
+      } else if (bmi >= 25 && bmi < 29.9) {
+        category = "Overweight";
+        recommendation = "Consider a healthy diet, regular workouts, and reducing sugary or fatty foods.";
+        cssClass = "overweight";
+      } else {
+        category = "Obese";
+        recommendation = "It's advisable to seek guidance from a healthcare professional for weight management.";
+        cssClass = "obese";
+      }
+
+      document.getElementById("result").innerHTML = `
+        <p><strong>Your BMI:</strong> ${bmi}</p>
+        <p><strong>Category:</strong> ${category}</p>
+        <div class="recommend ${cssClass}">
+          <strong>Recommendation:</strong><br> ${recommendation}
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
