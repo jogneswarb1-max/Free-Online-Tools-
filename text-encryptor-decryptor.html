@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Text Encryptor / Decryptor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f9ff;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: #0073e6;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .container {
+      max-width: 750px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      resize: vertical;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+    }
+    .buttons {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      flex: 1;
+      min-width: 160px;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    .encrypt { background: #0073e6; color: white; }
+    .decrypt { background: #28a745; color: white; }
+    .clear { background: #777; color: white; }
+    footer {
+      text-align: center;
+      margin: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Text Encryptor / Decryptor</h1>
+    <p>Encrypt and Decrypt text with various algorithms</p>
+  </header>
+
+  <div class="container">
+    <label for="text"><strong>Enter your text:</strong></label>
+    <textarea id="text" placeholder="Type or paste text here..."></textarea>
+
+    <label for="algo"><strong>Select Algorithm:</strong></label>
+    <select id="algo">
+      <option value="base64">Base64</option>
+      <option value="rot13">ROT13</option>
+      <option value="caesar">Caesar Cipher (Shift 3)</option>
+      <option value="reverse">Reverse Text</option>
+    </select>
+
+    <div class="buttons">
+      <button class="encrypt" onclick="processText('encrypt')">Encrypt</button>
+      <button class="decrypt" onclick="processText('decrypt')">Decrypt</button>
+      <button class="clear" onclick="clearText()">Clear</button>
+    </div>
+  </div>
+
+  <footer>
+    Single-file Text Encryptor/Decryptor • Save as <code>index.html</code> and host on GitHub Pages
+  </footer>
+
+  <script>
+    function processText(mode) {
+      let text = document.getElementById("text").value;
+      let algo = document.getElementById("algo").value;
+
+      if (!text.trim()) {
+        alert("Please enter some text first!");
+        return;
+      }
+
+      let result = "";
+
+      if (algo === "base64") {
+        if (mode === "encrypt") {
+          result = btoa(unescape(encodeURIComponent(text)));
+        } else {
+          try {
+            result = decodeURIComponent(escape(atob(text)));
+          } catch (e) {
+            alert("Invalid Base64 string!");
+            return;
+          }
+        }
+      }
+
+      else if (algo === "rot13") {
+        result = text.replace(/[a-zA-Z]/g, c => {
+          return String.fromCharCode(
+            c <= "Z"
+              ? ((c.charCodeAt(0) - 65 + 13) % 26) + 65
+              : ((c.charCodeAt(0) - 97 + 13) % 26) + 97
+          );
+        });
+      }
+
+      else if (algo === "caesar") {
+        let shift = 3;
+        result = text.replace(/[a-zA-Z]/g, c => {
+          let base = c <= "Z" ? 65 : 97;
+          return String.fromCharCode(
+            mode === "encrypt"
+              ? ((c.charCodeAt(0) - base + shift) % 26) + base
+              : ((c.charCodeAt(0) - base - shift + 26) % 26) + base
+          );
+        });
+      }
+
+      else if (algo === "reverse") {
+        result = text.split("").reverse().join("");
+      }
+
+      document.getElementById("text").value = result;
+    }
+
+    function clearText() {
+      document.getElementById("text").value = "";
+    }
+  </script>
+</body>
+</html>
