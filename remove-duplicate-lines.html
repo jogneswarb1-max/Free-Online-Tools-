@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Remove Duplicate Lines</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f9ff;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: #0b6cff;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .container {
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      resize: vertical;
+    }
+    .buttons {
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      flex: 1;
+      min-width: 140px;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    .remove { background: #0b6cff; color: white; }
+    .clear { background: #777; color: white; }
+    .copy { background: #28a745; color: white; }
+    footer {
+      text-align: center;
+      margin: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Remove Duplicate Lines</h1>
+    <p>Paste text below and remove duplicate lines instantly</p>
+  </header>
+
+  <div class="container">
+    <label for="text"><strong>Enter your text:</strong></label>
+    <textarea id="text" placeholder="Paste your lines here..."></textarea>
+
+    <div class="buttons">
+      <button class="remove" onclick="removeDuplicates()">Remove Duplicates</button>
+      <button class="copy" onclick="copyText()">Copy Result</button>
+      <button class="clear" onclick="clearText()">Clear</button>
+    </div>
+  </div>
+
+  <footer>
+    Single-file Duplicate Line Remover • Save as <code>index.html</code> and host on GitHub Pages
+  </footer>
+
+  <script>
+    function removeDuplicates() {
+      let text = document.getElementById("text").value;
+      if (!text.trim()) {
+        alert("Please enter some text first!");
+        return;
+      }
+      let lines = text.split(/\r?\n/);
+      let unique = [...new Set(lines)];
+      document.getElementById("text").value = unique.join("\n");
+    }
+
+    function clearText() {
+      document.getElementById("text").value = "";
+    }
+
+    function copyText() {
+      let textArea = document.getElementById("text");
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // mobile support
+      navigator.clipboard.writeText(textArea.value).then(() => {
+        alert("Text copied to clipboard!");
+      });
+    }
+  </script>
+</body>
+</html>
