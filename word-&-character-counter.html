@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Word & Character Counter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f9ff;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: #0b6cff;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .container {
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      resize: vertical;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-top: 15px;
+      background: #f0f6ff;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .stat {
+      flex: 1;
+      text-align: center;
+      margin: 5px 0;
+    }
+    .stat strong {
+      display: block;
+      font-size: 20px;
+      color: #0b6cff;
+    }
+    footer {
+      text-align: center;
+      margin: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Word & Character Counter</h1>
+    <p>Count words, characters, spaces, and paragraphs instantly</p>
+  </header>
+
+  <div class="container">
+    <label for="text"><strong>Enter your text:</strong></label>
+    <textarea id="text" placeholder="Type or paste text here..."></textarea>
+
+    <div class="stats">
+      <div class="stat"><strong id="words">0</strong>Words</div>
+      <div class="stat"><strong id="chars">0</strong>Characters</div>
+      <div class="stat"><strong id="spaces">0</strong>Spaces</div>
+      <div class="stat"><strong id="paras">0</strong>Paragraphs</div>
+    </div>
+  </div>
+
+  <footer>
+    Single-file Word & Character Counter • Save as <code>index.html</code> and host on GitHub Pages
+  </footer>
+
+  <script>
+    const textArea = document.getElementById("text");
+    const wordsEl = document.getElementById("words");
+    const charsEl = document.getElementById("chars");
+    const spacesEl = document.getElementById("spaces");
+    const parasEl = document.getElementById("paras");
+
+    function updateCounts() {
+      let text = textArea.value;
+
+      // Character count
+      let chars = text.length;
+
+      // Word count (trim spaces, split by whitespace)
+      let words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+      // Spaces count
+      let spaces = (text.match(/ /g) || []).length;
+
+      // Paragraph count (split by line breaks)
+      let paras = text.trim().split(/\n+/).filter(p => p.trim().length > 0).length;
+
+      // Update UI
+      charsEl.textContent = chars;
+      wordsEl.textContent = words;
+      spacesEl.textContent = spaces;
+      parasEl.textContent = paras;
+    }
+
+    textArea.addEventListener("input", updateCounts);
+  </script>
+</body>
+</html>
