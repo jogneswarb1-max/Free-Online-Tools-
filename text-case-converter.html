@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Text Case Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f9ff;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: #0b6cff;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .container {
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      resize: vertical;
+    }
+    .buttons {
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    .upper { background: #0b6cff; color: white; }
+    .lower { background: #28a745; color: white; }
+    .title { background: #ff9800; color: white; }
+    .clear { background: #777; color: white; }
+    footer {
+      text-align: center;
+      margin: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Text Case Converter</h1>
+    <p>Convert text between UPPERCASE, lowercase, and Title Case</p>
+  </header>
+
+  <div class="container">
+    <label for="inputText"><strong>Enter your text:</strong></label>
+    <textarea id="inputText" placeholder="Type or paste text here..."></textarea>
+
+    <div class="buttons">
+      <button class="upper" onclick="convertCase('upper')">UPPER CASE</button>
+      <button class="lower" onclick="convertCase('lower')">lower case</button>
+      <button class="title" onclick="convertCase('title')">Title Case</button>
+      <button class="clear" onclick="clearText()">Clear</button>
+    </div>
+  </div>
+
+  <footer>
+    Single-file Text Case Converter • Save as <code>index.html</code> and host on GitHub Pages
+  </footer>
+
+  <script>
+    function convertCase(type) {
+      let text = document.getElementById("inputText").value;
+      if (!text.trim()) {
+        alert("Please enter some text first!");
+        return;
+      }
+      if (type === "upper") {
+        text = text.toUpperCase();
+      } else if (type === "lower") {
+        text = text.toLowerCase();
+      } else if (type === "title") {
+        text = text.toLowerCase().split(" ")
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+      }
+      document.getElementById("inputText").value = text;
+    }
+    function clearText() {
+      document.getElementById("inputText").value = "";
+    }
+  </script>
+</body>
+</html>
