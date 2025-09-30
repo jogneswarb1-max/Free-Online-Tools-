@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Text Reverser</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fbff;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: #0066ff;
+      color: white;
+      text-align: center;
+      padding: 15px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .container {
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      font-size: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      resize: vertical;
+    }
+    .buttons {
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      flex: 1;
+      min-width: 160px;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    .char { background: #0066ff; color: white; }
+    .word { background: #28a745; color: white; }
+    .clear { background: #777; color: white; }
+    footer {
+      text-align: center;
+      margin: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Text Reverser</h1>
+    <p>Reverse text character-by-character or word-by-word</p>
+  </header>
+
+  <div class="container">
+    <label for="text"><strong>Enter your text:</strong></label>
+    <textarea id="text" placeholder="Type or paste text here..."></textarea>
+
+    <div class="buttons">
+      <button class="char" onclick="reverseText('char')">Reverse Characters</button>
+      <button class="word" onclick="reverseText('word')">Reverse Words</button>
+      <button class="clear" onclick="clearText()">Clear</button>
+    </div>
+  </div>
+
+  <footer>
+    Single-file Text Reverser • Save as <code>index.html</code> and host on GitHub Pages
+  </footer>
+
+  <script>
+    function reverseText(mode) {
+      let text = document.getElementById("text").value;
+      if (!text.trim()) {
+        alert("Please enter some text first!");
+        return;
+      }
+
+      let result = "";
+      if (mode === "char") {
+        result = text.split("").reverse().join("");
+      } else if (mode === "word") {
+        result = text.split(/\s+/).reverse().join(" ");
+      }
+
+      document.getElementById("text").value = result;
+    }
+
+    function clearText() {
+      document.getElementById("text").value = "";
+    }
+  </script>
+</body>
+</html>
