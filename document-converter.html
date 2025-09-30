@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Document Converter — Single File</title>
+  <style>
+    :root{--bg:#f7fbff;--card:#fff;--accent:#0b6cff;--muted:#666}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:var(--bg);color:#111}
+    header{background:linear-gradient(90deg,#eaf3ff,white);padding:18px 20px;box-shadow:0 1px 0 rgba(15,20,30,.04);display:flex;gap:12px;align-items:center}
+    h1{margin:0;font-size:18px}
+    .container{max-width:980px;margin:22px auto;padding:18px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(11,20,60,.06);margin-bottom:16px}
+    label{display:block;font-weight:600;margin-bottom:8px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    input[type=file]{display:block}
+    select,input,button,textarea{font-size:14px;padding:8px;border-radius:8px;border:1px solid #e6eefc}
+    button{background:var(--accent);color:white;border:none;cursor:pointer}
+    button.secondary{background:white;color:var(--accent);border:1px solid #cfe0ff}
+    textarea{width:100%;min-height:220px;resize:vertical}
+    .preview{white-space:pre-wrap;background:#fafcff;padding:12px;border-radius:8px;border:1px dashed #e6efff;min-height:160px;overflow:auto}
+    .small{font-size:13px;color:var(--muted)}
+    footer{max-width:980px;margin:0 auto 40px;padding:12px;text-align:center;color:#666;font-size:13px}
+    @media (max-width:720px){.row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'><rect rx='6' width='34' height='34' fill='%230b6cff'/><text x='50%' y='58%' font-size='16' font-family='Arial' text-anchor='middle' fill='white' font-weight='700'>DC</text></svg>" alt="logo" width="34" height="34">
+    <div>
+      <h1>Document Converter</h1>
+      <div class="small">Convert DOCX / HTML / MD / TXT ↔ DOCX / PDF / HTML / MD / TXT — client-side</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <label for="file">Upload a document</label>
+      <input id="file" type="file" accept=".docx,.html,.htm,.md,.txt" />
+      <div class="small" style="margin-top:8px">Supported input: <strong>DOCX, HTML, MD, TXT</strong>. (DOCX handled via mammoth). </div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="align-items:center">
+        <div style="flex:1">
+          <label for="format">Convert to</label>
+          <select id="format">
+            <option value="docx">DOCX (.docx)</option>
+            <option value="pdf">PDF (.pdf)</option>
+            <option value="html">HTML (.html)</option>
+            <option value="md">Markdown (.md)</option>
+            <option value="txt">Plain text (.txt)</option>
+          </select>
+        </div>
+        <div style="width:200px">
+          <label>&nbsp;</label>
+          <button id="convertBtn">Convert</button>
+        </div>
+        <div style="width:160px">
+          <label for="filename">Filename</label>
+          <input id="filename" placeholder="output" />
+        </div>
+      </div>
+      <div style="margin-top:12px" class="small">
+        Tip: For best PDF/DOCX results, convert via HTML (Markdown → HTML → DOCX/PDF). DOCX → PDF uses DOCX→HTML→PDF pipeline.
+      </div>
+    </section>
+
+    <section class="card">
+      <label>Preview / Edit (HTML view for rich output)</label>
+      <textarea id="editor" placeholder="Converted content or loaded text will appear here..."></textarea>
+      <div style="margin-top:10px" class="row">
+        <button class="secondary" id="toHtmlBtn">Render HTML Preview</button>
+        <button class="secondary" id="toMdBtn">Convert Preview → Markdown</button>
+        <button class="secondary" id="clearBtn">Clear</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <label>Preview (rendered HTML)</label>
+      <div id="rendered" class="preview">Rendered preview will appear here.</div>
+    </section>
+  </main>
+
+  <footer>Single-file Document Converter • Save as <code>index.html</code> and publish to GitHub Pages or open locally.</footer>
+
+  <!-- Libraries (CDN) -->
+  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://unpkg.com/turndown/dist/turndown.min.js"></script>
+  <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+
+  <script>
+    // Utilities
+    const fileInput = document.getElementById('file');
+    const editor = document.getElementById('editor');
+    const rendered = document.getElementById('rendered');
+    const convertBtn = document.getElementById('convertBtn');
+    const formatSelect = document.getElementById('format');
+    const filenameInput = document.getElementById('filename');
+
+    const turndownService = new TurndownService();
+
+    let currentSource = { type: null, raw: null, html: null }; // store pipeline
+
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    }
+
+    function stripHtmlTags(html) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || '';
+    }
+
+    async function handleFile(file) {
+      const name = file.name || 'file';
+      const ext = (name.split('.').pop() || '').toLowerCase();
+      filenameInput.value = name.replace(/\.[^.]+$/, '') || 'output';
+
+      if (ext === 'docx') {
+        const arrayBuffer = await file.arrayBuffer();
+        // mammoth to HTML
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        currentSource.type = 'docx';
+        currentSource.raw = file;
+        currentSource.html = result.value || '';
+        editor.value = currentSource.html;
+        rendered.innerHTML = currentSource.html;
+      } else if (ext === 'html' || ext === 'htm') {
+        const txt = await file.text();
+        currentSource.type = 'html';
+        currentSource.raw = txt;
+        currentSource.html = txt;
+        editor.value = txt;
+        rendered.innerHTML = txt;
+      } else if (ext === 'md' || ext === 'markdown') {
+        const txt = await file.text();
+        currentSource.type = 'md';
+        currentSource.raw = txt;
+        // convert md to html
+        const html = marked.parse(txt);
+        currentSource.html = html;
+        editor.value = txt;
+        rendered.innerHTML = html;
+      } else if (ext === 'txt') {
+        const txt = await file.text();
+        currentSource.type = 'txt';
+        currentSource.raw = txt;
+        currentSource.html = '<pre>' + escapeHtml(txt) + '</pre>';
+        editor.value = txt;
+        rendered.innerHTML = currentSource.html;
+      } else {
+        alert('Unsupported file type: ' + ext);
+      }
+    }
+
+    function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      handleFile(f).catch(err=>{ console.error(err); alert('Failed to load file: ' + err.message) });
+    });
+
+    // Buttons for preview edits
+    document.getElementById('clearBtn').addEventListener('click', ()=>{ editor.value=''; rendered.innerHTML='Rendered preview will appear here.'; currentSource = {type:null,raw:null,html:null}; });
+    document.getElementById('toHtmlBtn').addEventListener('click', ()=>{
+      const val = editor.value || '';
+      // If it's markdown-ish, convert; otherwise, assume HTML or text
+      if (val.trim().startsWith('#') || val.includes('\n') && val.includes('  ')) {
+        // rely on marked: but if user typed HTML, marked will pass through
+        const h = marked.parse(val);
+        currentSource.html = h;
+        rendered.innerHTML = h;
+      } else {
+        // treat as plain text
+        const h = '<pre>' + escapeHtml(val) + '</pre>';
+        currentSource.html = h;
+        rendered.innerHTML = h;
+      }
+    });
+
+    document.getElementById('toMdBtn').addEventListener('click', ()=>{
+      const val = editor.value || '';
+      // If the editor contains HTML, convert to MD
+      let html = val;
+      if (!val.trim().startsWith('<')) {
+        // treat as text or markdown — convert text to markdown by escaping
+        if (val.includes('\n') || val.length>200) {
+          // keep as-is
+          editor.value = val;
+          alert('Editor seems to be plain text or markdown already.');
+          return;
+        } else {
+          editor.value = val;
+          return;
+        }
+      }
+      const md = turndownService.turndown(html);
+      editor.value = md;
+    });
+
+    // Main convert handler
+    convertBtn.addEventListener('click', async ()=>{
+      const target = formatSelect.value;
+      const outBase = (filenameInput.value || 'output').replace(/\.[^/.]+$/, '');
+      try {
+        // If user edited the editor, use that as source
+        let sourceHtml = currentSource.html || '';
+        const editorVal = editor.value && editor.value.trim();
+        if (editorVal) {
+          if (editorVal.trim().startsWith('<')) {
+            sourceHtml = editorVal;
+          } else if (editorVal.trim().startsWith('#') || !editorVal.includes('<')) {
+            // treat as markdown or plain text
+            sourceHtml = marked.parse(editorVal);
+          } else {
+            sourceHtml = marked.parse(editorVal);
+          }
+        }
+
+        if (!sourceHtml) {
+          alert('No document loaded or entered. Upload a file or paste content into the editor.');
+          return;
+        }
+
+        if (target === 'html') {
+          const blob = new Blob([sourceHtml], {type:'text/html;charset=utf-8'});
+          downloadBlob(blob, outBase + '.html');
+          return;
+        }
+
+        if (target === 'md') {
+          // convert HTML => MD
+          const md = turndownService.turndown(sourceHtml);
+          const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+          downloadBlob(blob, outBase + '.md');
+          return;
+        }
+
+        if (target === 'txt') {
+          const text = stripHtmlTags(sourceHtml);
+          const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+          downloadBlob(blob, outBase + '.txt');
+          return;
+        }
+
+        if (target === 'docx') {
+          // Convert HTML -> docx using html-docx-js
+          // htmlDocx.asBlob(htmlString) exists in the library
+          const docxBlob = HTMLDocx.asBlob('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' + sourceHtml + '</body></html>');
+          downloadBlob(docxBlob, outBase + '.docx');
+          return;
+        }
+
+        if (target === 'pdf') {
+          // Use html2pdf to create PDF from HTML
+          // create a temporary container to render HTML
+          const container = document.createElement('div');
+          container.style.width='794px'; // A4 width approx in px
+          container.innerHTML = sourceHtml;
+          document.body.appendChild(container);
+          // options - leave default; allow user to change later if needed
+          const opt = {
+            margin:       10,
+            filename:     outBase + '.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 1 },
+            jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+          };
+          await html2pdf().set(opt).from(container).save();
+          container.remove();
+          return;
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert('Conversion failed: ' + (err && err.message || err));
+      }
+    });
+
+    // Extra: allow drag & drop
+    ['dragover','dragenter'].forEach(ev => {
+      document.addEventListener(ev, e => e.preventDefault());
+    });
+    document.addEventListener('drop', e => {
+      e.preventDefault();
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        handleFile(e.dataTransfer.files[0]).catch(err=>alert('Load error: '+err.message));
+      }
+    });
+
+    // If user opens page with a docx link query param (optional)
+    (function tryLoadFromQuery(){
+      const params = new URLSearchParams(location.search);
+      const url = params.get('url');
+      if (!url) return;
+      fetch(url).then(r=>r.blob()).then(b=>{
+        const f = new File([b], url.split('/').pop());
+        handleFile(f);
+      }).catch(()=>{ /* ignore */ });
+    })();
+  </script>
+</body>
+</html>
